@@ -25,6 +25,8 @@ def list_bookings(
 ):
     """แอดมินเห็นการจองของทุกคน ผู้ใช้ทั่วไปเห็นเฉพาะของตัวเอง"""
     stmt = select(Booking).order_by(Booking.start)
+    if username is not None:
+        username = username.lower()
     if not user.is_admin:
         if username is not None and username != user.username:
             raise Forbidden("ดูการจองของคนอื่นไม่ได้")

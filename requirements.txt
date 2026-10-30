@@ -1,9 +1,10 @@
-fastapi[standard]
-pydantic-settings
-sqlalchemy>=2.0
-alembic
-psycopg[binary]
-pyjwt
-pwdlib[argon2]
-tzdata
-pytest
+# dependency ของระบบจริง (ล็อกเวอร์ชันไว้ ติดตั้งกี่ครั้งก็ได้ของชุดเดิม)
+# อัปเดต: แก้เลขเวอร์ชันที่นี่ รันเทสต์ให้ผ่าน แล้วค่อย commit
+fastapi[standard]==0.162.0
+pydantic-settings==2.16.2
+SQLAlchemy==2.1.6
+alembic==1.20.1
+psycopg[binary]==3.3.6
+PyJWT==2.15.1
+pwdlib[argon2]==0.3.1
+tzdata==2026.6

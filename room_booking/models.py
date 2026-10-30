@@ -21,6 +21,10 @@ class User(Base):
     is_admin: Mapped[bool] = mapped_column(default=False)
 
 
+# แอปเก็บ username เป็นตัวพิมพ์เล็กอยู่แล้ว index นี้กันอีกชั้นเผื่อมีข้อมูลเข้าทางอื่น
+Index("uq_users_username_lower", func.lower(User.username), unique=True)
+
+
 class Room(Base):
     __tablename__ = "rooms"
     __table_args__ = NO_ID_REUSE
@@ -53,6 +57,22 @@ class Booking(Base):
     @property
     def username(self) -> str:
         return self.user.username
+
+
+class LoginFailure(Base):
+    """การ login ผิดแต่ละครั้ง ใช้นับเพื่อกันเดารหัสผ่าน (ดู rate_limit.py)
+
+    เก็บในฐานข้อมูลแทนหน่วยความจำ ทุก worker และทุกเครื่องจึงนับรวมกัน
+    """
+
+    __tablename__ = "login_failures"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    key: Mapped[str] = mapped_column(String(200))
+    failed_at: Mapped[datetime] = mapped_column(UTCDateTime, index=True)
+
+
+Index("ix_login_failures_key_failed_at", LoginFailure.key, LoginFailure.failed_at)
 
 
 # PostgreSQL: ให้ฐานข้อมูลปฏิเสธการจองที่เวลาซ้อนกันในห้องเดียวกันเอง

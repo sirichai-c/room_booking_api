@@ -1,7 +1,15 @@
 from datetime import datetime
 from typing import Annotated
 
-from pydantic import AfterValidator, BaseModel, ConfigDict, Field, PlainSerializer, model_validator
+from pydantic import (
+    AfterValidator,
+    BaseModel,
+    ConfigDict,
+    Field,
+    PlainSerializer,
+    field_validator,
+    model_validator,
+)
 
 from room_booking.config import settings
 
@@ -24,6 +32,12 @@ OutDateTime = Annotated[
 class UserCreate(BaseModel):
     username: str = Field(min_length=3, max_length=50, pattern=r"^[A-Za-z0-9_.-]+$")
     password: str = Field(min_length=8, max_length=128)
+
+    @field_validator("username")
+    @classmethod
+    def normalize_username(cls, value: str) -> str:
+        """เก็บเป็นตัวพิมพ์เล็กเสมอ กันสมัคร Alice ซ้อนกับ alice เพื่อแอบอ้าง"""
+        return value.lower()
 
 
 class UserOut(BaseModel):

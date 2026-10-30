@@ -19,20 +19,21 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="สร้างหรือเลื่อนผู้ใช้เป็นแอดมิน")
     parser.add_argument("username")
     args = parser.parse_args()
+    username = args.username.lower()
 
     with SessionLocal() as db:
-        user = db.scalar(select(User).where(User.username == args.username))
+        user = db.scalar(select(User).where(User.username == username))
         if user is None:
             password = getpass.getpass("รหัสผ่าน: ")
             try:
-                data = UserCreate(username=args.username, password=password)
+                data = UserCreate(username=username, password=password)
             except ValidationError as e:
                 sys.exit(f"ข้อมูลไม่ถูกต้อง: {e}")
             db.add(User(username=data.username, password_hash=hash_password(data.password), is_admin=True))
-            print(f"สร้างแอดมิน {args.username} แล้ว")
+            print(f"สร้างแอดมิน {username} แล้ว")
         else:
             user.is_admin = True
-            print(f"เลื่อน {args.username} เป็นแอดมินแล้ว")
+            print(f"เลื่อน {username} เป็นแอดมินแล้ว")
         db.commit()
 
 

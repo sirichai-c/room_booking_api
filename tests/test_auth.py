@@ -55,3 +55,48 @@ def test_me_with_forged_token(client):
 def test_old_x_user_header_no_longer_works(client):
     res = client.get("/bookings/me", headers={"X-User": "alice"})
     assert res.status_code == 401
+
+
+# ---------- username ไม่แยกตัวพิมพ์ ----------
+
+def test_username_is_case_insensitive(client):
+    res = client.post("/auth/register", json={"username": "Carol", "password": "secret-pass"})
+    assert res.json()["username"] == "carol"
+    # สมัครซ้อนด้วยตัวพิมพ์ต่างกันไม่ได้
+    assert client.post("/auth/register", json={"username": "CAROL", "password": "secret-pass"}).status_code == 409
+    # login ด้วยตัวพิมพ์ไหนก็ได้
+    assert client.post("/auth/token", data={"username": "cArOl", "password": "secret-pass"}).status_code == 200
+
+
+# ---------- กันเดารหัสผ่าน ----------
+
+def _login(client, username, password):
+    return client.post("/auth/token", data={"username": username, "password": password})
+
+
+def test_too_many_failed_logins_are_blocked(client):
+    client.post("/auth/register", json={"username": "carol", "password": "secret-pass"})
+    for _ in range(5):
+        assert _login(client, "carol", "wrong-pass").status_code == 401
+
+    res = _login(client, "carol", "secret-pass")  # รหัสถูกก็ยังโดนพัก
+    assert res.status_code == 429
+    assert int(res.headers["retry-after"]) > 0
+    assert isinstance(res.json()["detail"], str)
+
+
+def test_success_resets_failure_count(client):
+    client.post("/auth/register", json={"username": "carol", "password": "secret-pass"})
+    for _ in range(4):
+        _login(client, "carol", "wrong-pass")
+    assert _login(client, "carol", "secret-pass").status_code == 200
+    for _ in range(4):
+        assert _login(client, "carol", "wrong-pass").status_code == 401
+
+
+def test_block_is_per_username(client):
+    client.post("/auth/register", json={"username": "carol", "password": "secret-pass"})
+    for _ in range(5):
+        _login(client, "dave", "wrong-pass")
+    assert _login(client, "dave", "wrong-pass").status_code == 429
+    assert _login(client, "carol", "secret-pass").status_code == 200

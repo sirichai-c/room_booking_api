@@ -30,6 +30,21 @@ def test_invalid_settings_are_rejected(overrides):
         make(**overrides)
 
 
+PG = "postgresql+psycopg://u:p@db:5432/room_booking"
+
+
+def test_production_requires_postgres():
+    with pytest.raises(ValidationError, match="PostgreSQL"):
+        make(environment="production", database_url="sqlite:///./x.db")
+    assert make(environment="production", database_url=PG).environment == "production"
+
+
+def test_production_rejects_example_secret():
+    with pytest.raises(ValidationError, match="SECRET_KEY"):
+        make(environment="production", database_url=PG,
+             secret_key="change-me-to-a-random-string-at-least-32-chars")
+
+
 def test_secret_key_is_required(monkeypatch):
     monkeypatch.delenv("SECRET_KEY", raising=False)
     with pytest.raises(ValidationError):

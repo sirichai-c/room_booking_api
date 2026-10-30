@@ -9,6 +9,9 @@ os.environ.update({
     "DATABASE_URL": "sqlite://",
     "SECRET_KEY": "test-secret-key-that-is-long-enough-123456",
     "ACCESS_TOKEN_MINUTES": "60",
+    "ENVIRONMENT": "development",
+    "LOGIN_MAX_FAILURES": "5",
+    "LOGIN_WINDOW_MINUTES": "15",
 })
 
 import pytest
