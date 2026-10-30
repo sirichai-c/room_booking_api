@@ -1,0 +1,207 @@
+### ตัวอย่าง request สำหรับ PyCharm HTTP Client (รันจากบนลงล่าง)
+### ก่อนเริ่ม: alembic upgrade head และ python -m room_booking.create_admin admin
+### แล้วแก้รหัสผ่านแอดมินในส่วน "login แอดมิน" ให้ตรงกับที่ตั้งไว้
+
+### ===================== ผู้ใช้ =====================
+
+### สมัคร alice (201, ถ้ารันซ้ำได้ 409)
+POST http://127.0.0.1:8000/auth/register
+Content-Type: application/json
+
+{"username": "alice", "password": "alice-pass"}
+
+### สมัคร bob (201)
+POST http://127.0.0.1:8000/auth/register
+Content-Type: application/json
+
+{"username": "bob", "password": "bob-pass1"}
+
+### รหัสผ่านสั้นไป (422 พร้อม errors รายช่อง)
+POST http://127.0.0.1:8000/auth/register
+Content-Type: application/json
+
+{"username": "x", "password": "123"}
+
+### login alice (200 เก็บ token ไว้ใช้ต่อ)
+POST http://127.0.0.1:8000/auth/token
+Content-Type: application/x-www-form-urlencoded
+
+username=alice&password=alice-pass
+
+> {% client.global.set("alice", response.body.access_token); %}
+
+### login bob (200)
+POST http://127.0.0.1:8000/auth/token
+Content-Type: application/x-www-form-urlencoded
+
+username=bob&password=bob-pass1
+
+> {% client.global.set("bob", response.body.access_token); %}
+
+### login แอดมิน (200)
+POST http://127.0.0.1:8000/auth/token
+Content-Type: application/x-www-form-urlencoded
+
+username=admin&password=admin-pass
+
+> {% client.global.set("admin", response.body.access_token); %}
+
+### รหัสผิด (401)
+POST http://127.0.0.1:8000/auth/token
+Content-Type: application/x-www-form-urlencoded
+
+username=alice&password=wrong-pass
+
+### ข้อมูลตัวเอง (200)
+GET http://127.0.0.1:8000/auth/me
+Authorization: Bearer {{alice}}
+
+### ไม่มี token (401)
+GET http://127.0.0.1:8000/auth/me
+
+### ===================== ห้อง =====================
+
+### ห้องทั้งหมด (200)
+GET http://127.0.0.1:8000/rooms
+
+### ห้องที่จุ >= 10 (200 ได้ Room A)
+GET http://127.0.0.1:8000/rooms?min_capacity=10
+
+### ค้นชื่อ (200 ได้ Room B)
+GET http://127.0.0.1:8000/rooms?name=b
+
+### min_capacity ติดลบ (422)
+GET http://127.0.0.1:8000/rooms?min_capacity=-1
+
+### ห้องที่ไม่มี (404)
+GET http://127.0.0.1:8000/rooms/99
+
+### ผู้ใช้ทั่วไปสร้างห้อง (403)
+POST http://127.0.0.1:8000/rooms
+Authorization: Bearer {{alice}}
+Content-Type: application/json
+
+{"name": "Room D", "capacity": 50}
+
+### แอดมินสร้างห้อง (201)
+POST http://127.0.0.1:8000/rooms
+Authorization: Bearer {{admin}}
+Content-Type: application/json
+
+{"name": "Room D", "capacity": 50}
+
+### ชื่อซ้ำ ไม่สนตัวพิมพ์ (409)
+POST http://127.0.0.1:8000/rooms
+Authorization: Bearer {{admin}}
+Content-Type: application/json
+
+{"name": "room a", "capacity": 10}
+
+### ข้อมูลผิด (422)
+POST http://127.0.0.1:8000/rooms
+Authorization: Bearer {{admin}}
+Content-Type: application/json
+
+{"name": "", "capacity": 500}
+
+### แก้ชื่อห้อง 4 (200)
+PATCH http://127.0.0.1:8000/rooms/4
+Authorization: Bearer {{admin}}
+Content-Type: application/json
+
+{"name": "Big Room"}
+
+### ===================== การจอง =====================
+
+### alice จอง Room C 9:00-11:00 (201)
+POST http://127.0.0.1:8000/bookings
+Authorization: Bearer {{alice}}
+Content-Type: application/json
+
+{"room_id": 3, "start": "2099-03-02T09:00:00", "end": "2099-03-02T11:00:00", "attendees": 3}
+
+### bob จองชนเวลา (409)
+POST http://127.0.0.1:8000/bookings
+Authorization: Bearer {{bob}}
+Content-Type: application/json
+
+{"room_id": 3, "start": "2099-03-02T10:00:00", "end": "2099-03-02T12:00:00"}
+
+### bob จองต่อกันพอดี (201)
+POST http://127.0.0.1:8000/bookings
+Authorization: Bearer {{bob}}
+Content-Type: application/json
+
+{"room_id": 3, "start": "2099-03-02T11:00:00", "end": "2099-03-02T12:30:00"}
+
+### เวลาเดียวกันแต่คนละวัน (201)
+POST http://127.0.0.1:8000/bookings
+Authorization: Bearer {{bob}}
+Content-Type: application/json
+
+{"room_id": 3, "start": "2099-03-03T09:00:00", "end": "2099-03-03T11:00:00"}
+
+### คนเกินความจุห้อง (422)
+POST http://127.0.0.1:8000/bookings
+Authorization: Bearer {{alice}}
+Content-Type: application/json
+
+{"room_id": 3, "start": "2099-03-04T09:00:00", "end": "2099-03-04T10:00:00", "attendees": 10}
+
+### นอกเวลาเปิด (422)
+POST http://127.0.0.1:8000/bookings
+Authorization: Bearer {{alice}}
+Content-Type: application/json
+
+{"room_id": 1, "start": "2099-03-02T19:00:00", "end": "2099-03-02T21:00:00"}
+
+### จองย้อนหลัง (422)
+POST http://127.0.0.1:8000/bookings
+Authorization: Bearer {{alice}}
+Content-Type: application/json
+
+{"room_id": 1, "start": "2020-01-06T09:00:00", "end": "2020-01-06T10:00:00"}
+
+### เวลาจบก่อนเริ่ม (422)
+POST http://127.0.0.1:8000/bookings
+Authorization: Bearer {{alice}}
+Content-Type: application/json
+
+{"room_id": 1, "start": "2099-03-02T11:00:00", "end": "2099-03-02T09:00:00"}
+
+### ช่วงที่ Room C ไม่ว่างวันที่ 2 (200 ไม่บอกชื่อคนจอง)
+GET http://127.0.0.1:8000/rooms/3/bookings?date=2099-03-02
+
+### alice เห็นแค่ของตัวเอง (200)
+GET http://127.0.0.1:8000/bookings
+Authorization: Bearer {{alice}}
+
+### alice ดูของ bob (403)
+GET http://127.0.0.1:8000/bookings?user=bob
+Authorization: Bearer {{alice}}
+
+### แอดมินเห็นทุกคน (200)
+GET http://127.0.0.1:8000/bookings
+Authorization: Bearer {{admin}}
+
+### bob แก้การจองของ alice (403)
+PATCH http://127.0.0.1:8000/bookings/1
+Authorization: Bearer {{bob}}
+Content-Type: application/json
+
+{"attendees": 2}
+
+### alice เลื่อนเวลาตัวเอง (200)
+PATCH http://127.0.0.1:8000/bookings/1
+Authorization: Bearer {{alice}}
+Content-Type: application/json
+
+{"start": "2099-03-02T08:30:00", "end": "2099-03-02T10:30:00"}
+
+### ลบห้องที่ยังมีการจอง (409)
+DELETE http://127.0.0.1:8000/rooms/3
+Authorization: Bearer {{admin}}
+
+### alice ยกเลิกการจอง (204)
+DELETE http://127.0.0.1:8000/bookings/1
+Authorization: Bearer {{alice}}
