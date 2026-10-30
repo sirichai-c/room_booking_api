@@ -65,8 +65,11 @@ room_booking_api/
 │   ├── schemas.py       ข้อมูลขาเข้า-ขาออก (Pydantic)
 │   ├── security.py      hash รหัสผ่าน, สร้าง/ตรวจ JWT
 │   ├── deps.py          dependency: session, ผู้ใช้ปัจจุบัน, แอดมิน
+│   ├── exceptions.py    error ของกฎธุรกิจ (NotFound, Forbidden, Conflict, RuleViolation)
+│   ├── errors.py        แปลง error เป็น HTTP response ให้รูปแบบเดียวกัน
 │   ├── services.py      ฟังก์ชันหา/404 ที่ใช้ร่วมกัน
-│   ├── errors.py        จัดรูปแบบ error 422
+│   ├── room_rules.py    กฎของห้อง (ชื่อซ้ำ, ความจุ, ลบได้ไหม)
+│   ├── booking_rules.py กฎของการจอง (เวลาเปิด-ปิด, เวลาชน, ความจุ, สิทธิ์เจ้าของ)
 │   ├── auth.py          endpoint สมัคร/login
 │   ├── rooms.py         endpoint ของห้อง
 │   ├── bookings.py      endpoint ของการจอง
@@ -76,6 +79,10 @@ room_booking_api/
 ├── test.http            ตัวอย่าง request (PyCharm HTTP Client)
 └── requirements.txt
 ```
+
+router (`rooms.py`, `bookings.py`) ทำแค่รับ request, เรียกกฎ, บันทึก, ตอบกลับ
+ส่วนกฎอยู่ใน `*_rules.py` ซึ่งไม่รู้จัก HTTP: โยน error จาก `exceptions.py` แล้ว `errors.py` แปลงเป็น status code
+กฎจึงเทสต์ได้ตรง ๆ โดยไม่ต้องยิง request (ดู `tests/test_rules.py`)
 
 ## Endpoint
 
